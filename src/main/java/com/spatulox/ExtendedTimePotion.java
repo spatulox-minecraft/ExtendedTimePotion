@@ -1,9 +1,9 @@
 package com.spatulox;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.registry.FabricBrewingRecipeRegistryBuilder;
 
-import net.minecraft.resources.ResourceLocation;
+import net.fabricmc.fabric.api.registry.FabricPotionBrewingBuilder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.Items;
@@ -188,8 +188,7 @@ public class ExtendedTimePotion implements ModInitializer {
     public void onInitialize() {
 
         // HEALING and HARMING cannot be time extended
-
-        FabricBrewingRecipeRegistryBuilder.BUILD.register(builder -> {
+        FabricPotionBrewingBuilder.BUILD.register(builder -> {
             // NIGHT_VISION
             builder.addMix(Potions.LONG_NIGHT_VISION, Items.GOLD_NUGGET, LONG_LONG_NIGHT_VISION);
             builder.addMix(LONG_LONG_NIGHT_VISION, Items.GOLDEN_CARROT, ULTRA_LONG_NIGHT_VISION);
@@ -296,7 +295,7 @@ public class ExtendedTimePotion implements ModInitializer {
         return Registry.registerForHolder(BuiltInRegistries.POTION, ExtendedTimePotion.id(name), potion);
     }
 
-    public static ResourceLocation id(String path){
-        return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
+    public static Identifier id(String path){
+        return Identifier.fromNamespaceAndPath(MOD_ID, path);
     }
 }
