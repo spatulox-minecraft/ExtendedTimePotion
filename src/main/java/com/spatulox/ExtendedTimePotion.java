@@ -3,6 +3,7 @@ package com.spatulox;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.registry.FabricBrewingRecipeRegistryBuilder;
 
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.Items;
@@ -11,7 +12,6 @@ import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.Registry;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -293,10 +293,10 @@ public class ExtendedTimePotion implements ModInitializer {
     }
 
     private static Holder<Potion> registerPotion(String name, Potion potion) {
-        return Registry.registerForHolder(BuiltInRegistries.POTION, Identifier.fromNamespaceAndPath(MOD_ID, name), potion);
+        return Registry.registerForHolder(BuiltInRegistries.POTION, ExtendedTimePotion.id(name), potion);
     }
 
-    public static Identifier id(String path){
-        return Identifier.fromNamespaceAndPath(MOD_ID, path);
+    public static ResourceLocation id(String path){
+        return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
     }
 }
