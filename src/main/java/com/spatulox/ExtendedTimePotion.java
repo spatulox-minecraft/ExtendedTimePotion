@@ -42,9 +42,9 @@ public class ExtendedTimePotion implements ModInitializer {
 
     // STRONG_LEAPING
     public static Holder<Potion> LONG_LONG_STRONG_LEAPING = registerPotion("long_long_strong_leaping",
-            new Potion("leaping", new MobEffectInstance(MobEffects.JUMP_BOOST, ELEVEN_MINUTES)));
+            new Potion("leaping", new MobEffectInstance(MobEffects.JUMP_BOOST, ELEVEN_MINUTES, 1)));
     public static Holder<Potion> ULTRA_LONG_STRONG_LEAPING = registerPotion("ultra_long_strong_leaping",
-            new Potion("leaping", new MobEffectInstance(MobEffects.JUMP_BOOST, FIFTEEN_MINUTES)));
+            new Potion("leaping", new MobEffectInstance(MobEffects.JUMP_BOOST, FIFTEEN_MINUTES, 1)));
 
     // FIRE RESISTANCE
     public static Holder<Potion> LONG_LONG_FIRE_RESISTANCE = registerPotion("long_long_fire_resistance",
