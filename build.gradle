@@ -1,6 +1,8 @@
 plugins {
 	id "net.fabricmc.fabric-loom" version "${loom_version}"
 	id 'maven-publish'
+	id "com.modrinth.minotaur" version "2.+"
+	id "net.darkhax.curseforgegradle" version "1.2.30"
 }
 
 version = project.mod_version
@@ -56,6 +58,49 @@ jar {
 	from("LICENSE") {
 		rename { "${it}_${inputs.properties.archivesName}"}
 	}
+}
+
+// configure publishing to Modrinth and CurseForge
+// required: set curseforge_id / modrinth_id in gradle.properties (project IDs/slugs)
+// required: set the CURSEFORGE_TOKEN / MODRINTH_TOKEN environment variables (never commit API tokens)
+// the changelog is read from the latest "## " entry of CHANGELOG.md; pass -Pchangelog="..." to override it
+static String latestChangelogEntry(File file) {
+	def lines = file.readLines()
+	def startIndex = lines.findIndexOf { it.startsWith("## ") }
+	if (startIndex == -1) return file.text.trim()
+	def endIndex = (startIndex + 1..<lines.size()).find { lines[it].startsWith("## ") } ?: lines.size()
+	return lines[startIndex..<endIndex].join("\n").trim()
+}
+
+def changelogFile = file("CHANGELOG.md")
+def releaseChangelog = findProperty("changelog") ?: (changelogFile.exists() ? latestChangelogEntry(changelogFile) : "See commit history for changes.")
+def supportedMinecraftVersions = project.supported_minecraft_versions.split(",").collect { it.trim() }
+
+modrinth {
+	token = System.getenv("MODRINTH_TOKEN")
+	projectId = project.modrinth_id
+	versionNumber = project.version
+	versionType = "release"
+	uploadFile = tasks.jar
+	changelog = releaseChangelog
+	gameVersions = supportedMinecraftVersions
+	loaders = ["fabric"]
+}
+
+tasks.register("publishCurseForge", net.darkhax.curseforgegradle.TaskPublishCurseForge) {
+	apiToken = System.getenv("CURSEFORGE_TOKEN")
+
+	def mainFile = upload(project.curseforge_id, tasks.jar)
+	mainFile.changelog = releaseChangelog
+	mainFile.releaseType = "release"
+	mainFile.addModLoader("Fabric")
+	supportedMinecraftVersions.each { mainFile.addGameVersion(it) }
+}
+
+tasks.register("publishMod") {
+	group = "publishing"
+	description = "Publishes the mod jar to Modrinth and CurseForge"
+	dependsOn tasks.named("modrinth"), tasks.named("publishCurseForge")
 }
 
 // configure the maven publication
