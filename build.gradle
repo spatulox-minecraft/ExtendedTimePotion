@@ -30,6 +30,23 @@ dependencies {
 	
 }
 
+// Tests d'integration cote client (source set src/gametest).
+// Cree la tache runClientGameTest, qui lance un vrai client Minecraft et
+// execute les entrypoints "fabric-client-gametest" declares dans
+// src/gametest/resources/fabric.mod.json.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "extended-time-potion-test"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+		// on garde le repertoire de run entre deux executions, sinon la
+		// sauvegarde creee par le test disparait
+		clearRunDirectory = false
+	}
+}
+
 processResources {
 	inputs.property "version", project.version
 
