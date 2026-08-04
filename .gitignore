@@ -7,3 +7,5 @@ remappedSrc/
 # sortie du test serveur headless (.github/scripts/headless-server-test.sh)
 server-test.log
 pr-body.md
+
+scripts/__pycache__/
