@@ -9,3 +9,5 @@ server-test.log
 pr-body.md
 
 gradle/wrapper/gradle-wrapper.jar
+
+scripts/__pycache__/
