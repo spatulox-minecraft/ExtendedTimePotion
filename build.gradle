@@ -87,20 +87,34 @@ modrinth {
 	loaders = ["fabric"]
 }
 
-tasks.register("publishCurseForge", net.darkhax.curseforgegradle.TaskPublishCurseForge) {
-	apiToken = System.getenv("CURSEFORGE_TOKEN")
+// CurseForgeGradle attend l'ID *numerique* du projet, pas le slug. Si
+// curseforge_id n'est pas numerique, on n'enregistre pas la tache : sinon
+// toute invocation de gradle (y compris ./gradlew build en CI) echoue des la
+// phase de configuration.
+def curseForgeIdIsValid = project.curseforge_id ==~ /\d+/
+if (!curseForgeIdIsValid) {
+	logger.warn("curseforge_id='${project.curseforge_id}' n'est pas un ID numerique : la tache publishCurseForge est desactivee.")
+}
 
-	def mainFile = upload(project.curseforge_id, tasks.jar)
-	mainFile.changelog = releaseChangelog
-	mainFile.releaseType = "release"
-	mainFile.addModLoader("Fabric")
-	supportedMinecraftVersions.each { mainFile.addGameVersion(it) }
+if (curseForgeIdIsValid) {
+	tasks.register("publishCurseForge", net.darkhax.curseforgegradle.TaskPublishCurseForge) {
+		apiToken = System.getenv("CURSEFORGE_TOKEN")
+
+		def mainFile = upload(project.curseforge_id, tasks.jar)
+		mainFile.changelog = releaseChangelog
+		mainFile.releaseType = "release"
+		mainFile.addModLoader("Fabric")
+		supportedMinecraftVersions.each { mainFile.addGameVersion(it) }
+	}
 }
 
 tasks.register("publishMod") {
 	group = "publishing"
 	description = "Publishes the mod jar to Modrinth and CurseForge"
-	dependsOn tasks.named("modrinth"), tasks.named("publishCurseForge")
+	dependsOn tasks.named("modrinth")
+	if (curseForgeIdIsValid) {
+		dependsOn tasks.named("publishCurseForge")
+	}
 }
 
 // configure the maven publication
