@@ -181,8 +181,11 @@ désormais dans `.mc-update-state.json`.
 
 ## 2. `build.gradle`
 
-- **`:101` et `:120`** : `tasks.jar` → `tasks.remapJar`. `tasks.jar` produit le jar dev
-  (`Fabric-Mapping-Namespace: named`) ; le distribuable est `remapJar`.
+- ~~`tasks.jar` → `tasks.remapJar`~~ — **faux, abandonné.** `docs/ci-plan.md` affirmait que
+  `tasks.jar` produisait le jar dev ; vérification faite sur la vraie JVM,
+  `tasks.findByName("remapJar")` vaut `null` et aucune tâche ne contient « remap ». Minecraft 26.x
+  étant non obfusqué, Loom n'a rien à remapper et n'enregistre jamais la tâche. Le jar de `:jar`
+  porte déjà `Fabric-Mapping-Namespace: official`. Les deux publications restent sur `tasks.jar`.
 - **`:94`** : `project.supported_minecraft_versions.split(",")*.trim().findAll { it }` — en Groovy
   `"".split(",")` vaut `[""]`, donc après un reset de série `gameVersions` partait à `[""]`.
 - Faire échouer `modrinth` et `publishCurseForge` dans un `doFirst` si la liste est vide. **Pas** à

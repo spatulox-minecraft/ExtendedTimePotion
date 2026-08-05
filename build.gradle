@@ -107,8 +107,10 @@ def requireSupportedVersions = {
 	}
 }
 
-// remapJar, not jar: with Loom, tasks.jar produces the DEV jar (named mappings).
-// The distributable one is remapJar (Fabric-Mapping-Namespace: official).
+// tasks.jar is the distributable one, and there is no remapJar to prefer over it:
+// Minecraft 26.x ships unobfuscated, so Loom has nothing to remap and never
+// registers the task (tasks.findByName("remapJar") == null). The jar it produces
+// already carries Fabric-Mapping-Namespace: official in its manifest.
 modrinth {
 	token = System.getenv("MODRINTH_TOKEN")
 	projectId = project.modrinth_id
