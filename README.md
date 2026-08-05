@@ -28,6 +28,31 @@ Elle met à jour `gradle.properties` et `fabric.mod.json`, lance `./gradlew buil
 `.github/scripts/headless-server-test.sh`, et n'annonce la compatibilité que si les deux passent —
 sinon elle restaure les bornes de compatibilité précédentes en conservant le bump de dépendances.
 
+### Déclencher la mise à jour à la main
+
+Depuis GitHub : onglet **Actions** → *New Minecraft version* → **Run workflow**. Le menu déroulant
+permet de choisir la branche, et deux champs sont proposés : `minecraft_version` (vide = dernière
+release Mojang) et `force` (continuer même si le dépôt est déjà sur cette version).
+
+En ligne de commande, si `gh` est installé :
+
+```bash
+gh workflow run check-new-minecraft.yml --ref master
+gh workflow run check-new-minecraft.yml --ref master -f minecraft_version=26.2 -f force=true
+gh run watch
+```
+
+Deux prérequis :
+
+- le workflow doit exister sur **`master`** : GitHub n'expose ni `workflow_dispatch` ni `schedule`
+  pour un fichier absent de la branche par défaut. Une fois qu'il y est, on peut le lancer depuis
+  n'importe quelle branche (c'est la version du fichier de cette branche qui s'exécute) ;
+- *Settings → Actions → General* → **Allow GitHub Actions to create and approve pull requests**,
+  sans quoi l'étape d'ouverture de PR échoue.
+
+La PR est ouverte vers la branche depuis laquelle le workflow a été lancé, pour qu'un essai depuis
+une branche de travail ne produise pas une PR contenant tout le diff de cette branche.
+
 Détail du modèle de compatibilité et du découpage : `docs/mc-update-plan.md`.
 `python3 scripts/update-mc-version.py --help` liste les autres modes (`--dry-run`, `--json`,
 `--mark-supported`, `--revert-compat`).
