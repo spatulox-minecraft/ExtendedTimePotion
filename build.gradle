@@ -137,7 +137,7 @@ if (curseForgeIdIsValid) {
 	tasks.register("publishCurseForge", net.darkhax.curseforgegradle.TaskPublishCurseForge) {
 		apiToken = System.getenv("CURSEFORGE_TOKEN")
 
-		def mainFile = upload(project.curseforge_id, tasks.remapJar)
+		def mainFile = upload(project.curseforge_id, tasks.jar)
 		mainFile.changelog = releaseChangelog
 		mainFile.releaseType = "release"
 		mainFile.addModLoader("Fabric")
