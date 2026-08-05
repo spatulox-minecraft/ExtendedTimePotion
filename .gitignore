@@ -4,9 +4,15 @@ build
 run
 remappedSrc/
 
-# sortie du test serveur headless (.github/scripts/headless-server-test.sh)
+# outputs of the update chain (headless-server-test.sh, check-new-minecraft.yml)
 server-test.log
+build.log
 pr-body.md
+issue-body.md
+
+# compatibility snapshot written by scripts/update-mc-version.py,
+# consumed by --revert-compat
+.mc-update-state.json
 
 gradle/wrapper/gradle-wrapper.jar
 
