@@ -379,6 +379,30 @@ EXPECTED_POTIONS=999 bash .github/scripts/headless-server-test.sh; echo $?      
 
 ---
 
+## Niveau Java, dérivé lui aussi
+
+Mojang publie `javaVersion.majorVersion` dans le manifeste de chaque version, pour toutes les
+époques (`1.16.5` → 8, `1.21.11` → 21, `26.x` → 25). `java_version_for()` le lit et la valeur est
+propagée à trois endroits, ce qui supprime quatre corrections manuelles lors d'un changement de
+major :
+
+| fichier | clé |
+|---|---|
+| `gradle.properties` | `java_version` (nouvelle clé, source de vérité) |
+| `src/main/resources/fabric.mod.json` | `depends.java` → `">=25"` |
+| `extended-time-potion.mixins.json` | `compatibilityLevel` → `"JAVA_25"` |
+
+`build.gradle` en dérive `options.release`, `sourceCompatibility` et `targetCompatibility` ; les
+deux workflows en dérivent la version du JDK installé — `check-new-minecraft.yml` la lit dans les
+sorties de l'étape d'update, donc **après** le bump, pour installer le JDK qu'exige la *nouvelle*
+version de Minecraft. Si le champ manque du manifeste, la valeur courante est conservée avec un
+avertissement plutôt que de bloquer l'update.
+
+Le niveau Java suit le bump et n'est donc **pas** annulé par `--revert-compat`, qui ne restaure que
+les affirmations de compatibilité Minecraft.
+
+---
+
 ## Non inclus (écarté ou hors sujet)
 
 - **Tests unitaires du script** (`scripts/test_update_mc_version.py`) — non retenu. La vérification

@@ -55,8 +55,13 @@ processResources {
 	}
 }
 
+// Derived from java_version in gradle.properties, which scripts/update-mc-version.py
+// resolves from the Mojang manifest. Hardcoding it here meant a Minecraft major bump
+// had to be fixed by hand in four places.
+def javaVersion = JavaVersion.toVersion(project.java_version)
+
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+	it.options.release = Integer.parseInt(project.java_version)
 }
 
 java {
@@ -65,8 +70,8 @@ java {
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+	sourceCompatibility = javaVersion
+	targetCompatibility = javaVersion
 }
 
 jar {
