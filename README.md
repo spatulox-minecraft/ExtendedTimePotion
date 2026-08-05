@@ -14,8 +14,12 @@ Have fun !
 ## Mettre à jour Minecraft
 
 Tous les mercredis, `.github/workflows/check-new-minecraft.yml` résout les dernières versions
-Minecraft / Fabric Loader / Fabric API, build, lance un serveur headless et ouvre une PR assignée.
-Si le mod ne fonctionne pas sur la nouvelle version, une issue est ouverte avec les logs.
+Minecraft / Fabric Loader / Fabric API / fabric-loom, build, lance un serveur headless et ouvre une
+PR assignée. Si le mod ne fonctionne pas sur la nouvelle version, une issue est ouverte avec les logs.
+
+`loom_version` suit la dernière version **stable** de fabric-loom. Si un build casse dans loom
+lui-même, on l'épingle avec `--loom <version>` (utile pour une vieille version de Minecraft qu'un
+loom récent ne sait plus builder).
 
 En local, la même séquence tient en une commande :
 

@@ -391,6 +391,11 @@ EXPECTED_POTIONS=999 bash .github/scripts/headless-server-test.sh; echo $?      
 - `WorldReloadGameTest` (`runClientGameTest`) n'est lancé par aucun workflow — test mort, il faudrait
   `xvfb-run`.
 - Actions non épinglées (`@v4`, `@v7`) et `minotaur "2.+"` — build non reproductible.
-- `loom_version=1.17-SNAPSHOT` non résolu automatiquement — sujet de `PLAN_FOIREUX.md`.
+- ~~`loom_version=1.17-SNAPSHOT` non résolu automatiquement~~ — **fait** : `latest_stable_loom()`
+  lit `maven-metadata.xml` de fabric-loom, écarte tout ce qui n'est pas purement numérique
+  (`-alpha.`, `-SNAPSHOT`) et trie numériquement, car le métadata est en ordre de *publication*
+  (`1.17.14` y apparaît après `1.18.0-alpha.4`). `--loom <version>` épingle. Loom n'ayant pas de
+  table « quel loom builde quel Minecraft », c'est la dernière stable qui est prise ; en cas
+  d'échec, le build casse, la PR reste en draft et l'issue est ouverte.
 - Le job d'update reste vert même quand le build échoue (`continue-on-error`) ; l'issue assignée
   compense désormais, mais un ❌ serait plus lisible.
