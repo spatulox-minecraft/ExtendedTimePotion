@@ -379,6 +379,35 @@ EXPECTED_POTIONS=999 bash .github/scripts/headless-server-test.sh; echo $?      
 
 ---
 
+## Matrice de versions : tester tout ce qui est annoncé
+
+Une mise à jour bumpe `fabric_api` et le loader vers leur dernière version, et élargit
+`depends.minecraft` à toute la série (`>=26.1 <=26.1.2`). Ne démarrer que 26.1.2 ne prouve donc
+**rien** sur 26.1 et 26.1.1 tournant avec *cette* Fabric API — or le jar promet de s'y charger et
+les stores les listent. `.github/scripts/test-matrix.sh` build et démarre un serveur pour chaque
+version annoncée, avec les dépendances résolues : exactement la combinaison qui part en production.
+
+- La liste vient de `--list-test-versions`, donc la notion de série reste dans le seul script Python.
+- Le monde est effacé avant chaque démarrage : une sauvegarde écrite par une version récente refuse
+  de se charger sur une plus ancienne, ce qui casserait la matrice dès qu'elle redescend.
+- `headless-server-test.sh` accepte `GRADLE_ARGS` (`-Pminecraft_version=…`) et `EXPECTED_MC`. Le
+  garde « version démarrée == version attendue » vérifie du même coup que l'override est réellement
+  pris en compte, et pas silencieusement ignoré.
+- La matrice écrit `test-matrix-status.txt` (`<version> ok|build|server`). Le corps de PR le lit
+  plutôt que de recalculer la liste : à ce stade `--revert-compat` a pu la raccourcir.
+- Le workflow n'a plus qu'une étape `tests` au lieu du couple build/smoke.
+
+**Retry ciblé sur un blocage de Loom.** Loom résout les mods sur des threads virtuels
+(`DeobfSpecContext.getModsFromConfiguration`) qui s'interbloquent parfois sur le moniteur `Cleaner`
+de la JVM, pendant `setupMinecraft`. Constaté sur Loom 1.17.17 + JBR 25.0.3 : `jstack` ne montre
+aucun propriétaire du moniteur, car il n'affiche pas les threads virtuels — il faut
+`jcmd Thread.dump_to_file -format=json`. Ce blocage n'atteint **jamais** la ligne
+`Starting minecraft server version`, alors qu'un mod cassé y arrive toujours : c'est ce critère qui
+les sépare, et seul le blocage est retenté (une fois). Sans ça la CI attendait `BOOT_TIMEOUT` puis
+accusait une version de Minecraft parfaitement saine.
+
+---
+
 ## Niveau Java, dérivé lui aussi
 
 Mojang publie `javaVersion.majorVersion` dans le manifeste de chaque version, pour toutes les

@@ -6,6 +6,9 @@ remappedSrc/
 
 # outputs of the update chain (headless-server-test.sh, check-new-minecraft.yml)
 server-test.log
+server-test-*.log
+test-matrix.log
+test-matrix-status.txt
 build.log
 pr-body.md
 issue-body.md
