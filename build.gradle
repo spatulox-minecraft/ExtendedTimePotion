@@ -30,9 +30,9 @@ dependencies {
 	
 }
 
-// Tests d'integration cote client (source set src/gametest).
-// Cree la tache runClientGameTest, qui lance un vrai client Minecraft et
-// execute les entrypoints "fabric-client-gametest" declares dans
+// Client side integration tests (src/gametest source set).
+// Creates the runClientGameTest task, which launches a real Minecraft client and
+// runs the "fabric-client-gametest" entrypoints declared in
 // src/gametest/resources/fabric.mod.json.
 fabricApi {
 	configureTests {
@@ -41,8 +41,8 @@ fabricApi {
 		enableGameTests = false
 		enableClientGameTests = true
 		eula = true
-		// on garde le repertoire de run entre deux executions, sinon la
-		// sauvegarde creee par le test disparait
+		// keep the run directory between two executions, otherwise the save
+		// created by the test disappears
 		clearRunDirectory = false
 	}
 }
@@ -91,8 +91,24 @@ static String latestChangelogEntry(File file) {
 
 def changelogFile = file("CHANGELOG.md")
 def releaseChangelog = findProperty("changelog") ?: (changelogFile.exists() ? latestChangelogEntry(changelogFile) : "See commit history for changes.")
-def supportedMinecraftVersions = project.supported_minecraft_versions.split(",").collect { it.trim() }
+// findAll { it } is not cosmetic: in Groovy "".split(",") is [""], so an empty
+// supported_minecraft_versions (right after a series reset) would otherwise be
+// published as a single invalid game version.
+def supportedMinecraftVersions = project.supported_minecraft_versions.split(",")*.trim().findAll { it }
 
+// Checked in doFirst rather than at configuration time: throwing here would break
+// every gradle invocation, including ./gradlew build in CI (same trap already
+// worked around below for curseforge_id).
+def requireSupportedVersions = {
+	if (supportedMinecraftVersions.isEmpty()) {
+		throw new GradleException("supported_minecraft_versions is empty: no version has been " +
+			"validated yet, nothing can be published. Run the build and the headless server " +
+			"test, then: python3 scripts/update-mc-version.py --mark-supported")
+	}
+}
+
+// remapJar, not jar: with Loom, tasks.jar produces the DEV jar (named mappings).
+// The distributable one is remapJar (Fabric-Mapping-Namespace: official).
 modrinth {
 	token = System.getenv("MODRINTH_TOKEN")
 	projectId = project.modrinth_id
@@ -104,24 +120,30 @@ modrinth {
 	loaders = ["fabric"]
 }
 
-// CurseForgeGradle attend l'ID *numerique* du projet, pas le slug. Si
-// curseforge_id n'est pas numerique, on n'enregistre pas la tache : sinon
-// toute invocation de gradle (y compris ./gradlew build en CI) echoue des la
-// phase de configuration.
+tasks.named("modrinth") {
+	doFirst { requireSupportedVersions() }
+}
+
+// CurseForgeGradle expects the *numeric* project ID, not the slug. When
+// curseforge_id is not numeric the task is simply not registered: otherwise every
+// gradle invocation (including ./gradlew build in CI) would fail at configuration
+// time.
 def curseForgeIdIsValid = project.curseforge_id ==~ /\d+/
 if (!curseForgeIdIsValid) {
-	logger.warn("curseforge_id='${project.curseforge_id}' n'est pas un ID numerique : la tache publishCurseForge est desactivee.")
+	logger.warn("curseforge_id='${project.curseforge_id}' is not a numeric ID: the publishCurseForge task is disabled.")
 }
 
 if (curseForgeIdIsValid) {
 	tasks.register("publishCurseForge", net.darkhax.curseforgegradle.TaskPublishCurseForge) {
 		apiToken = System.getenv("CURSEFORGE_TOKEN")
 
-		def mainFile = upload(project.curseforge_id, tasks.jar)
+		def mainFile = upload(project.curseforge_id, tasks.remapJar)
 		mainFile.changelog = releaseChangelog
 		mainFile.releaseType = "release"
 		mainFile.addModLoader("Fabric")
 		supportedMinecraftVersions.each { mainFile.addGameVersion(it) }
+
+		doFirst { requireSupportedVersions() }
 	}
 }
 
