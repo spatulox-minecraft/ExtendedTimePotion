@@ -1,0 +1,39 @@
+Points relevés en revue et NON retenus. Ce fichier est la mémoire des décisions :
+ce qui est ici est connu, assumé, et ne doit pas être redécouvert de zéro.
+
+- Actions non épinglées et minotaur "2.+" — build non reproductible. Les actions
+  sont sur des majeures flottantes (checkout@v7, setup-java@v5,
+  upload-artifact@v7, gradle/actions/setup-gradle@v5), pas sur des SHA ;
+  l'épisode de la dépréciation Node 20 en est le symptôme direct.
+  Le point sensible n'est pas là mais sur `minotaur "2.+"` dans build.gradle :
+  une 2.x publiée entre deux releases arrive sans prévenir, et le chemin publish
+  est celui où une surprise coûte le plus cher (un numéro de version brûlé sur
+  Modrinth ne se réutilise pas). curseforgegradle est épinglé (1.2.30), loom
+  suit loom_version. Correctif minimal si l'envie revient : épingler minotaur
+  sur la version réellement résolue aujourd'hui, 2.9.0.
+
+- Tests unitaires du script (scripts/test_update_mc_version.py) — décision en
+  suspens. La surface de fonctions pures a grandi : series_of, parse_version,
+  versions_to_test, compat_range et mc_label, cette dernière décidant du nom du
+  jar publié. Toutes testables sans réseau.
+
+- Robustesse locale de headless-server-test.sh : il écrase run/server.properties
+  et run/eula.txt sans sauvegarde (l.59 et l.68), et --run-tests l'appelle.
+  Aucun impact en CI (runner neuf) ; le monde du joueur n'est pas touché, seul
+  run/ci-smoke-test est supprimé. Assumé, relève plus du README que du code.
+
+- WorldReloadGameTest (src/gametest) n'est lancé par aucun workflow, et depuis
+  la mise à jour 26.2 il NE COMPILE MÊME PLUS : TestSingleplayerContext a perdu
+  getClientLevel() entre fabric-api 0.155.2+26.1.2 (compile) et 0.156.0+26.2
+  (échoue). Personne ne pouvait le voir, `./gradlew build` ne compile pas le
+  source set gametest. À savoir avant d'essayer de le relancer : ce n'est pas
+  seulement un test mort, c'est du code à réparer. C'est aussi la seule chose du
+  dépôt qui testait le comportement réel du mod (potions présentes après
+  rechargement d'un monde), donc la seule réponse automatisable à la ligne
+  « Test brewing in game » de la checklist de PR.
+
+Traités depuis, gardés ici pour l'historique :
+- grep -c sous set -e dans headless-server-test.sh : un compte de potions à zéro
+  tuait le script sur une affectation, sans message. Corrigé.
+- Le job d'update restait vert quand le mod était cassé : un step final rend
+  désormais le run rouge, après la PR et l'issue. Corrigé.
