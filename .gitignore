@@ -9,9 +9,11 @@ server-test.log
 server-test-*.log
 test-matrix.log
 test-matrix-status.txt
+test-escalation.txt
 build.log
 pr-body.md
 issue-body.md
+escalation.md
 
 # compatibility snapshot written by scripts/update-mc-version.py,
 # consumed by --revert-compat
