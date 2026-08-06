@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "extended-time-potion-test",
+	"version": "1.0.0",
+	"name": "Extended Time Potion - tests",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"com.spatulox.gametest.WorldReloadGameTest"
+		]
+	},
+	"depends": {
+		"extended-time-potion": "*"
+	}
+}

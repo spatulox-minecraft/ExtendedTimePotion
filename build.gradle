@@ -30,6 +30,23 @@ dependencies {
 	
 }
 
+// Client side integration tests (src/gametest source set).
+// Creates the runClientGameTest task, which launches a real Minecraft client and
+// runs the "fabric-client-gametest" entrypoints declared in
+// src/gametest/resources/fabric.mod.json.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "extended-time-potion-test"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+		// keep the run directory between two executions, otherwise the save
+		// created by the test disappears
+		clearRunDirectory = false
+	}
+}
+
 processResources {
 	inputs.property "version", project.version
 
@@ -38,8 +55,13 @@ processResources {
 	}
 }
 
+// Derived from java_version in gradle.properties, which scripts/update-mc-version.py
+// resolves from the Mojang manifest. Hardcoding it here meant a Minecraft major bump
+// had to be fixed by hand in four places.
+def javaVersion = JavaVersion.toVersion(project.java_version)
+
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+	it.options.release = Integer.parseInt(project.java_version)
 }
 
 java {
@@ -48,8 +70,8 @@ java {
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+	sourceCompatibility = javaVersion
+	targetCompatibility = javaVersion
 }
 
 jar {
@@ -63,19 +85,66 @@ jar {
 // configure publishing to Modrinth and CurseForge
 // required: set curseforge_id / modrinth_id in gradle.properties (project IDs/slugs)
 // required: set the CURSEFORGE_TOKEN / MODRINTH_TOKEN environment variables (never commit API tokens)
-// the changelog is read from the latest "## " entry of CHANGELOG.md; pass -Pchangelog="..." to override it
-static String latestChangelogEntry(File file) {
+
+// findAll { it } is not cosmetic: in Groovy "".split(",") is [""], so an empty
+// supported_minecraft_versions (right after a series reset) would otherwise be
+// published as a single invalid game version.
+def supportedMinecraftVersions = project.supported_minecraft_versions.split(",")*.trim().findAll { it }
+
+// The top "## " entry of CHANGELOG.md, but ONLY when it names the version being
+// published. Releases are cut automatically by .github/workflows/release.yml, so
+// the file is usually a release behind; attaching a stale entry to a different
+// version is worse than attaching none.
+static String changelogEntryFor(File file, String version) {
+	if (!file.exists()) return null
 	def lines = file.readLines()
 	def startIndex = lines.findIndexOf { it.startsWith("## ") }
-	if (startIndex == -1) return file.text.trim()
+	if (startIndex == -1) return null
+	if (lines[startIndex].substring(3).trim() != version) return null
 	def endIndex = (startIndex + 1..<lines.size()).find { lines[it].startsWith("## ") } ?: lines.size()
 	return lines[startIndex..<endIndex].join("\n").trim()
 }
 
-def changelogFile = file("CHANGELOG.md")
-def releaseChangelog = findProperty("changelog") ?: (changelogFile.exists() ? latestChangelogEntry(changelogFile) : "See commit history for changes.")
-def supportedMinecraftVersions = project.supported_minecraft_versions.split(",").collect { it.trim() }
+// Fallback for the automatic Minecraft bumps, which have no hand written notes:
+// every value here is already resolved by scripts/update-mc-version.py.
+def generatedChangelog = {
+	def parts = ["Support for Minecraft ${project.minecraft_version}".toString(), ""]
+	if (!supportedMinecraftVersions.isEmpty()) {
+		parts << "Compatible: ${supportedMinecraftVersions.join(', ')}".toString()
+	}
+	parts << "Requires Java ${project.java_version}".toString()
+	parts << "fabric-loader ${project.loader_version}".toString()
+	parts << "fabric-api ${project.fabric_api_version}".toString()
+	parts.join("\n")
+}
 
+def changelogFile = file("CHANGELOG.md")
+def releaseChangelog = findProperty("changelog")
+	?: changelogEntryFor(changelogFile, project.version.toString())
+	?: generatedChangelog()
+
+// The changelog is only observable by publishing for real otherwise.
+tasks.register("printChangelog") {
+	group = "publishing"
+	description = "Prints the changelog that would be attached to the release"
+	doLast { println releaseChangelog }
+}
+
+// Checked in doFirst rather than at configuration time: throwing here would break
+// every gradle invocation, including ./gradlew build in CI (same trap already
+// worked around below for curseforge_id).
+def requireSupportedVersions = {
+	if (supportedMinecraftVersions.isEmpty()) {
+		throw new GradleException("supported_minecraft_versions is empty: no version has been " +
+			"validated yet, nothing can be published. Run bash .github/scripts/test-matrix.sh, " +
+			"then: python3 scripts/update-mc-version.py --mark-supported")
+	}
+}
+
+// tasks.jar is the distributable one, and there is no remapJar to prefer over it:
+// Minecraft 26.x ships unobfuscated, so Loom has nothing to remap and never
+// registers the task (tasks.findByName("remapJar") == null). The jar it produces
+// already carries Fabric-Mapping-Namespace: official in its manifest.
 modrinth {
 	token = System.getenv("MODRINTH_TOKEN")
 	projectId = project.modrinth_id
@@ -87,17 +156,25 @@ modrinth {
 	loaders = ["fabric"]
 }
 
-// CurseForgeGradle attend l'ID *numerique* du projet, pas le slug. Si
-// curseforge_id n'est pas numerique, on n'enregistre pas la tache : sinon
-// toute invocation de gradle (y compris ./gradlew build en CI) echoue des la
-// phase de configuration.
+tasks.named("modrinth") {
+	doFirst { requireSupportedVersions() }
+}
+
+// CurseForgeGradle expects the *numeric* project ID, not the slug. When
+// curseforge_id is not numeric the task is simply not registered: otherwise every
+// gradle invocation (including ./gradlew build in CI) would fail at configuration
+// time.
 def curseForgeIdIsValid = project.curseforge_id ==~ /\d+/
 if (!curseForgeIdIsValid) {
-	logger.warn("curseforge_id='${project.curseforge_id}' n'est pas un ID numerique : la tache publishCurseForge est desactivee.")
+	logger.warn("curseforge_id='${project.curseforge_id}' is not a numeric ID: the publishCurseForge task is disabled.")
 }
 
 if (curseForgeIdIsValid) {
 	tasks.register("publishCurseForge", net.darkhax.curseforgegradle.TaskPublishCurseForge) {
+		// CurseForgeGradle sets neither, which hides the task from
+		// "gradlew tasks --group publishing" and makes it look unregistered.
+		group = "publishing"
+		description = "Uploads the mod jar to CurseForge"
 		apiToken = System.getenv("CURSEFORGE_TOKEN")
 
 		def mainFile = upload(project.curseforge_id, tasks.jar)
@@ -105,6 +182,8 @@ if (curseForgeIdIsValid) {
 		mainFile.releaseType = "release"
 		mainFile.addModLoader("Fabric")
 		supportedMinecraftVersions.each { mainFile.addGameVersion(it) }
+
+		doFirst { requireSupportedVersions() }
 	}
 }
 

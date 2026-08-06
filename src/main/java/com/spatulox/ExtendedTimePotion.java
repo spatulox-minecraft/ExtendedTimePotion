@@ -288,7 +288,18 @@ public class ExtendedTimePotion implements ModInitializer {
             // INFESTED
             builder.addMix(Potions.INFESTED, Items.GOLD_NUGGET, LONG_LONG_INFESTED);
             builder.addMix(LONG_LONG_INFESTED, Items.GOLDEN_CARROT, ULTRA_LONG_INFESTED);
+
+            // Marqueur de bon fonctionnement : arriver ici prouve que le callback
+            // de brassage de Fabric API a tourne sans lever d'exception.
+            // Le CI verifie cette ligne pour valider la compatibilite avec une
+            // nouvelle version (cf. .github/scripts/headless-server-test.sh).
+            LOGGER.info("Brewing mixes registered");
         });
+
+        long registered = BuiltInRegistries.POTION.keySet().stream()
+                .filter(id -> MOD_ID.equals(id.getNamespace()))
+                .count();
+        LOGGER.info("Registered {} potions", registered);
     }
 
     private static Holder<Potion> registerPotion(String name, Potion potion) {
