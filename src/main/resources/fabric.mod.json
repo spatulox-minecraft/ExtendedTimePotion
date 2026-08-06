@@ -3,15 +3,15 @@
 	"id": "extended-time-potion",
 	"version": "${version}",
 	"name": "Extended Time Potion",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "Mod that allow you to brew potions with activated time up to 15 minutes",
 	"authors": [
-		"Me!"
+		"Spatulox"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
 		"sources": "https://github.com/FabricMC/fabric-example-mod"
 	},
-	"license": "CC0-1.0",
+	"license": "CC-BY-4.0",
 	"icon": "assets/extended-time-potion/icon.png",
 	"environment": "*",
 	"entrypoints": {
@@ -29,6 +29,6 @@
 		"fabric-api": "*"
 	},
 	"suggests": {
-		"another-mod": "*"
+
 	}
 }
