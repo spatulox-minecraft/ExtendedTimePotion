@@ -85,21 +85,50 @@ jar {
 // configure publishing to Modrinth and CurseForge
 // required: set curseforge_id / modrinth_id in gradle.properties (project IDs/slugs)
 // required: set the CURSEFORGE_TOKEN / MODRINTH_TOKEN environment variables (never commit API tokens)
-// the changelog is read from the latest "## " entry of CHANGELOG.md; pass -Pchangelog="..." to override it
-static String latestChangelogEntry(File file) {
-	def lines = file.readLines()
-	def startIndex = lines.findIndexOf { it.startsWith("## ") }
-	if (startIndex == -1) return file.text.trim()
-	def endIndex = (startIndex + 1..<lines.size()).find { lines[it].startsWith("## ") } ?: lines.size()
-	return lines[startIndex..<endIndex].join("\n").trim()
-}
 
-def changelogFile = file("CHANGELOG.md")
-def releaseChangelog = findProperty("changelog") ?: (changelogFile.exists() ? latestChangelogEntry(changelogFile) : "See commit history for changes.")
 // findAll { it } is not cosmetic: in Groovy "".split(",") is [""], so an empty
 // supported_minecraft_versions (right after a series reset) would otherwise be
 // published as a single invalid game version.
 def supportedMinecraftVersions = project.supported_minecraft_versions.split(",")*.trim().findAll { it }
+
+// The top "## " entry of CHANGELOG.md, but ONLY when it names the version being
+// published. Releases are cut automatically by .github/workflows/release.yml, so
+// the file is usually a release behind; attaching a stale entry to a different
+// version is worse than attaching none.
+static String changelogEntryFor(File file, String version) {
+	if (!file.exists()) return null
+	def lines = file.readLines()
+	def startIndex = lines.findIndexOf { it.startsWith("## ") }
+	if (startIndex == -1) return null
+	if (lines[startIndex].substring(3).trim() != version) return null
+	def endIndex = (startIndex + 1..<lines.size()).find { lines[it].startsWith("## ") } ?: lines.size()
+	return lines[startIndex..<endIndex].join("\n").trim()
+}
+
+// Fallback for the automatic Minecraft bumps, which have no hand written notes:
+// every value here is already resolved by scripts/update-mc-version.py.
+def generatedChangelog = {
+	def parts = ["Support for Minecraft ${project.minecraft_version}".toString(), ""]
+	if (!supportedMinecraftVersions.isEmpty()) {
+		parts << "Compatible: ${supportedMinecraftVersions.join(', ')}".toString()
+	}
+	parts << "Requires Java ${project.java_version}".toString()
+	parts << "fabric-loader ${project.loader_version}".toString()
+	parts << "fabric-api ${project.fabric_api_version}".toString()
+	parts.join("\n")
+}
+
+def changelogFile = file("CHANGELOG.md")
+def releaseChangelog = findProperty("changelog")
+	?: changelogEntryFor(changelogFile, project.version.toString())
+	?: generatedChangelog()
+
+// The changelog is only observable by publishing for real otherwise.
+tasks.register("printChangelog") {
+	group = "publishing"
+	description = "Prints the changelog that would be attached to the release"
+	doLast { println releaseChangelog }
+}
 
 // Checked in doFirst rather than at configuration time: throwing here would break
 // every gradle invocation, including ./gradlew build in CI (same trap already
@@ -107,8 +136,8 @@ def supportedMinecraftVersions = project.supported_minecraft_versions.split(",")
 def requireSupportedVersions = {
 	if (supportedMinecraftVersions.isEmpty()) {
 		throw new GradleException("supported_minecraft_versions is empty: no version has been " +
-			"validated yet, nothing can be published. Run the build and the headless server " +
-			"test, then: python3 scripts/update-mc-version.py --mark-supported")
+			"validated yet, nothing can be published. Run bash .github/scripts/test-matrix.sh, " +
+			"then: python3 scripts/update-mc-version.py --mark-supported")
 	}
 }
 
@@ -142,6 +171,10 @@ if (!curseForgeIdIsValid) {
 
 if (curseForgeIdIsValid) {
 	tasks.register("publishCurseForge", net.darkhax.curseforgegradle.TaskPublishCurseForge) {
+		// CurseForgeGradle sets neither, which hides the task from
+		// "gradlew tasks --group publishing" and makes it look unregistered.
+		group = "publishing"
+		description = "Uploads the mod jar to CurseForge"
 		apiToken = System.getenv("CURSEFORGE_TOKEN")
 
 		def mainFile = upload(project.curseforge_id, tasks.jar)

@@ -28,9 +28,10 @@ python3 scripts/update-mc-version.py --run-tests          # dernière release Mo
 python3 scripts/update-mc-version.py 26.2 --run-tests     # version précise
 ```
 
-Elle met à jour `gradle.properties` et `fabric.mod.json`, lance `./gradlew build` puis
-`.github/scripts/headless-server-test.sh`, et n'annonce la compatibilité que si les deux passent —
-sinon elle restaure les bornes de compatibilité précédentes en conservant le bump de dépendances.
+Elle met à jour `gradle.properties` et `fabric.mod.json`, lance `.github/scripts/test-matrix.sh` —
+qui build et démarre un serveur pour **chaque** version annoncée, pas seulement la plus récente — et
+n'annonce la compatibilité que si toutes passent ; sinon elle restaure les bornes de compatibilité
+précédentes en conservant le bump de dépendances.
 
 ### Déclencher la mise à jour à la main
 
@@ -60,3 +61,45 @@ une branche de travail ne produise pas une PR contenant tout le diff de cette br
 Détail du modèle de compatibilité et du découpage : `docs/mc-update-plan.md`.
 `python3 scripts/update-mc-version.py --help` liste les autres modes (`--dry-run`, `--json`,
 `--mark-supported`, `--revert-compat`).
+
+## Publier une version
+
+Rien à lancer à la main : `.github/workflows/release.yml` publie sur Modrinth et CurseForge dès
+qu'un merge sur `master` touche `gradle.properties` avec un `mod_version` jamais sorti. Il enchaîne
+trois jobs :
+
+1. **`check`** — le tag `v<mod_version>` n'existe pas encore, et `minecraft_version` figure bien dans
+   `supported_minecraft_versions`. Ce second garde-fou refuse de publier une compatibilité que la
+   matrice n'a jamais prouvée, cas d'une PR *draft* mergée à la main.
+2. **`publish`** — la matrice de versions complète, puis `./gradlew publishMod`.
+3. **`tag`** — le tag, posé **après** l'upload seulement.
+
+Le tag signifie donc « version sortie », et non plus « version mergée ». C'est ce qui rend un échec
+rattrapable : publication ratée → pas de tag → relancer le workflow réessaie.
+
+Deux secrets sont requis dans *Settings → Secrets and variables → Actions* :
+
+| secret | où l'obtenir |
+|---|---|
+| `MODRINTH_TOKEN` | Modrinth → Settings → PATs, portée *Create versions* |
+| `CURSEFORGE_TOKEN` | CurseForge → My Account → API Tokens |
+
+### Le changelog publié
+
+Par ordre de priorité :
+
+1. `-Pchangelog="..."` s'il est passé ;
+2. l'entrée `## ` en tête de `CHANGELOG.md` **si elle nomme exactement le `mod_version` publié** —
+   c'est ainsi qu'on écrit des notes de version à la main ;
+3. sinon un texte généré depuis `gradle.properties`, ce que publient les bumps automatiques.
+
+Une entrée périmée est donc ignorée plutôt que collée à la mauvaise version. Pour voir le texte
+exact avant de merger :
+
+```bash
+./gradlew printChangelog
+```
+
+`publishMod` n'est pas transactionnel : si CurseForge échoue après un Modrinth réussi, aucun tag
+n'est posé et une relance rejouerait Modrinth, qui refusera le numéro en doublon. Reprise :
+`./gradlew publishCurseForge` seul, puis re-déclencher le workflow pour le tag.
