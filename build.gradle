@@ -182,6 +182,11 @@ if (curseForgeIdIsValid) {
 		mainFile.releaseType = "release"
 		mainFile.addModLoader("Fabric")
 		supportedMinecraftVersions.each { mainFile.addGameVersion(it) }
+		// CurseForge rejects an upload with error 1021 unless at least one value of
+		// the "environment" group is selected, on top of the game versions and the
+		// modloader. fabric.mod.json declares "environment": "*", so both apply.
+		mainFile.addGameVersion("Client")
+		mainFile.addGameVersion("Server")
 
 		doFirst { requireSupportedVersions() }
 	}
