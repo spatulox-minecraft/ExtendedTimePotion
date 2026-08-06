@@ -63,10 +63,10 @@ validée. La borne est donc montée dans le commit 1, puis :
 - **KO** → `--revert-compat` restaure l'état antérieur des **deux** clés de compatibilité (commit 2),
   PR draft, issue assignée.
 
-Les **bumps de version** (`minecraft_version`, `loader_version`, `fabric_api_version`, `mod_version`),
-eux, sont conservés dans tous les cas : c'est le diff de dépendances déjà fait, dont part la personne
-qui reprend la PR à la main. Seules les **affirmations de compatibilité** sont annulées. Rien de non
-prouvé ne subsiste, même sur la branche de PR.
+Les **bumps de version** (`minecraft_version`, `mod_version`, plus ce que l'escalade a pu bouger sur
+`loader_version` / `fabric_api_version`), eux, sont conservés dans tous les cas : c'est le diff de
+dépendances déjà fait, dont part la personne qui reprend la PR à la main. Seules les **affirmations
+de compatibilité** sont annulées. Rien de non prouvé ne subsiste, même sur la branche de PR.
 
 ---
 
@@ -157,13 +157,16 @@ il n'y a plus rien à annuler.
 Après une update réussie, enchaîne dans `REPO_ROOT` via `subprocess.run` (sortie streamée) :
 
 ```
-./gradlew build --stacktrace          (gradlew.bat si os.name == "nt")
-bash .github/scripts/headless-server-test.sh
+bash .github/scripts/test-with-escalation.sh
 ```
 
-Les deux passent → `mark_supported()`, exit 0. L'un échoue → `revert_compat()`, message expliquant
-ce qui a cassé, exit 1. Incompatible avec `--dry-run` (erreur d'argparse). C'est exactement la
-séquence de la CI, en une commande :
+Une seule commande déléguée, et non la séquence build + serveur recopiée ici : le wrapper contient
+la matrice **et** l'échelle d'escalade, donc le local et la CI exécutent strictement la même chose.
+La dupliquer en Python serait un second endroit où elle peut diverger.
+
+Ça passe → `mark_supported()`, exit 0. Ça casse → `revert_compat()`, message expliquant ce qui a
+cassé, exit 1. Incompatible avec `--dry-run` (erreur d'argparse). C'est exactement la séquence de la
+CI, en une commande :
 
 ```bash
 python3 scripts/update-mc-version.py --run-tests          # dernière release Mojang
@@ -369,11 +372,17 @@ EXPECTED_POTIONS=999 bash .github/scripts/headless-server-test.sh; echo $?      
   `minecraft-update`, non-draft si tout est vert. Relancer le même dispatch → la PR est mise à jour,
   pas dupliquée.
 - Chemin d'échec : dispatch avec `EXPECTED_POTIONS=999` injecté, ou une version MC connue pour
-  casser. Attendu : PR **draft**, commit 2 = revert de la compat, `fabric.mod.json` de la branche
-  revenu à `">=26.1 <=26.1.2"` et `supported_minecraft_versions` à sa valeur d'avant, tandis que
-  `minecraft_version` / `loader_version` / `fabric_api_version` restent bumpés,
-  **issue ouverte assignée à Spatulox** avec le tail du log. Relancer → commentaire sur l'issue
-  existante, pas de doublon.
+  casser. Attendu : l'escalade tente `--bump-fabric-api` puis `--bump-loader`, chacun suivi d'une
+  matrice complète (ou saute le barreau en code 3 s'il n'y a rien de plus récent) ; puis PR
+  **draft**, commit 2 = revert de la compat, `fabric.mod.json` de la branche revenu à
+  `">=26.1 <=26.1.2"`, `"fabric-api": "*"` et `supported_minecraft_versions` à leur valeur d'avant,
+  tandis que `minecraft_version` et les bumps tentés par l'escalade restent en place,
+  **issue ouverte assignée à Spatulox** avec le tail du log et le tableau des escalades tentées.
+  Relancer → commentaire sur l'issue existante, pas de doublon.
+- Chemin « escalade réussie » : reculer `fabric_api_version` à la main sur une version trop vieille,
+  puis dispatch. Attendu : la 1ʳᵉ matrice casse, `--bump-fabric-api` s'applique, la 2ᵉ matrice
+  rejoue **les trois** sous-versions et passe, PR **non-draft** avec une section « Escalation », et
+  `fabric.mod.json` portant `"fabric-api": ">=<version brute>"`.
 - `tag-mc-support.yml` : après merge, `git fetch --tags && git tag | grep v26.2-1.1.0`. Relancer en
   `workflow_dispatch` → « tag déjà existant », sans échouer.
 
@@ -381,11 +390,10 @@ EXPECTED_POTIONS=999 bash .github/scripts/headless-server-test.sh; echo $?      
 
 ## Matrice de versions : tester tout ce qui est annoncé
 
-Une mise à jour bumpe `fabric_api` et le loader vers leur dernière version, et élargit
-`depends.minecraft` à toute la série (`>=26.1 <=26.1.2`). Ne démarrer que 26.1.2 ne prouve donc
-**rien** sur 26.1 et 26.1.1 tournant avec *cette* Fabric API — or le jar promet de s'y charger et
-les stores les listent. `.github/scripts/test-matrix.sh` build et démarre un serveur pour chaque
-version annoncée, avec les dépendances résolues : exactement la combinaison qui part en production.
+Une mise à jour élargit `depends.minecraft` à toute la série (`>=26.1 <=26.1.2`). Ne démarrer que
+26.1.2 ne prouve donc **rien** sur 26.1 et 26.1.1 — or le jar promet de s'y charger et les stores les
+listent. `.github/scripts/test-matrix.sh` build et démarre un serveur pour chaque version annoncée,
+avec les dépendances résolues : exactement la combinaison qui part en production.
 
 - La liste vient de `--list-test-versions`, donc la notion de série reste dans le seul script Python.
 - Le monde est effacé avant chaque démarrage : une sauvegarde écrite par une version récente refuse
@@ -405,6 +413,62 @@ aucun propriétaire du moniteur, car il n'affiche pas les threads virtuels — i
 `Starting minecraft server version`, alors qu'un mod cassé y arrive toujours : c'est ce critère qui
 les sépare, et seul le blocage est retenté (une fois). Sans ça la CI attendait `BOOT_TIMEOUT` puis
 accusait une version de Minecraft parfaitement saine.
+
+---
+
+## Dépendances gelées et escalade
+
+Bumper Minecraft, le loader et Fabric API d'un coup rendait une matrice rouge illisible : trois
+variables avaient bougé, et le loader comme l'API changent le comportement de **toutes** les
+sous-versions à la fois, alors que seule Minecraft était censée bouger.
+
+Une mise à jour ne bouge donc plus qu'une variable : Minecraft. `loader_version` et
+`fabric_api_version` restent **gelés** sur la valeur déjà dans `gradle.properties`, la même pour
+26.1, 26.1.1 et 26.1.2. `loom_version` échappe au gel — c'est le plugin de build, pas une dépendance
+du jar — et le niveau Java aussi, puisque Mojang le dicte.
+
+`loader_for()` et `latest_fabric_api()` restent appelés, mais comme **sondes de disponibilité** : que
+Fabric ne liste ni loader ni API pour la cible, c'est la définition de « Fabric n'est pas prêt »
+(code de sortie 2). Leur valeur n'est plus écrite, seulement rapportée en
+`available_loader_version` / `available_fabric_api_version`, ce qui permet à la PR d'afficher
+« gelé sur X, dernier dispo Y » sans jamais confondre les deux.
+
+Les dépendances gelées ne bougent qu'en **réaction** à un échec, une à la fois, chacune suivie d'une
+matrice complète — `.github/scripts/test-with-escalation.sh` :
+
+```
+matrice avec les dépendances gelées
+  KO → --bump-fabric-api → matrice complète
+         KO → --bump-loader → matrice complète
+                KO → --revert-compat, PR draft, issue
+```
+
+- **Chaque barreau rejoue toute la matrice**, pas seulement la version cassée : une Fabric API plus
+  récente est exactement le genre de changement qui répare la version la plus récente en cassant une
+  plus ancienne de la même série, et `depends.minecraft` les promet toutes.
+- L'ordre va du moins au plus invasif : Fabric API est une bibliothèque que le mod appelle, le loader
+  est ce qui fait tourner *tous* les mods du serveur.
+- `--bump-*` sort en **code 3** quand il n'y a rien de plus récent. Ce n'est pas un échec : ce
+  barreau ne peut simplement rien changer, et rejouer la matrice brûlerait vingt minutes de CI à
+  reproduire le même rouge. Le script passe au barreau suivant.
+- `--bump-*` ne touche **pas** `fabric.mod.json`. Un bump est une hypothèse ; le plancher n'est gravé
+  que par `--mark-supported`, une fois la matrice passée.
+- Le script écrit `test-escalation.txt` (`<clé> <avant> <après>`), lu par le corps de PR et par
+  l'issue : ça évite qu'on propose comme correctif un bump déjà tenté.
+
+**Le plancher de dépendance.** Une escalade qui corrige devient une exigence du mod, la preuve
+qu'elle était nécessaire étant précisément ce que la matrice vient de produire :
+
+```
+fabric_api_version = 0.156.1+26.2   →   depends."fabric-api" = ">=0.156.1+26.2"
+```
+
+La version est écrite brute, suffixe compris. Fabric suit semver, où les métadonnées de build sont
+ignorées à la comparaison, donc le `+26.2` est cosmétique au runtime — mais il fait dire au fichier
+*exactement* quel artefact a été testé. `--mark-supported` ne l'écrit que pour ce qui a réellement
+bougé, en comparant `gradle.properties` au snapshot `.mc-update-state.json` : sans escalade,
+`"fabric-api"` garde son `"*"`. `--revert-compat` restaure les deux planchers avec le reste des
+affirmations de compatibilité.
 
 ---
 

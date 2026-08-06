@@ -13,13 +13,33 @@ Have fun !
 
 ## Mettre à jour Minecraft
 
-Tous les mercredis, `.github/workflows/check-new-minecraft.yml` résout les dernières versions
-Minecraft / Fabric Loader / Fabric API / fabric-loom, build, lance un serveur headless et ouvre une
-PR assignée. Si le mod ne fonctionne pas sur la nouvelle version, une issue est ouverte avec les logs.
+Tous les mercredis, `.github/workflows/check-new-minecraft.yml` passe à la dernière version de
+Minecraft, build, lance un serveur headless et ouvre une PR assignée. Si le mod ne fonctionne pas
+sur la nouvelle version, une issue est ouverte avec les logs.
 
-`loom_version` suit la dernière version **stable** de fabric-loom. Si un build casse dans loom
-lui-même, on l'épingle avec `--loom <version>` (utile pour une vieille version de Minecraft qu'un
-loom récent ne sait plus builder).
+**Une seule variable bouge : Minecraft.** `loader_version` et `fabric_api_version` restent **gelés**
+sur la valeur déjà dans `gradle.properties`, identique pour toutes les sous-versions d'une série.
+Les bumper en même temps que Minecraft rendait une matrice rouge illisible — trois suspects, et le
+loader comme l'API changent le comportement de *toutes* les sous-versions d'un coup.
+
+Ils ne bougent donc qu'en **escalade**, en réaction à un échec, un à la fois, chacun suivi d'une
+matrice complète (`.github/scripts/test-with-escalation.sh`) :
+
+```
+matrice avec les dépendances gelées
+  └─ rouge → bump fabric-api → matrice complète
+       └─ rouge → bump loader → matrice complète
+            └─ rouge → échec : compat annulée, PR draft, issue
+```
+
+Une escalade qui corrige est gravée dans `fabric.mod.json` en plancher de dépendance
+(`"fabric-api": ">=0.156.1+26.2"`), pour qu'un joueur sur une version plus ancienne soit invité à
+mettre à jour au lieu de crasher. Sans escalade, `"fabric-api"` garde son `"*"`.
+
+`loom_version` échappe au gel : c'est le plugin de build, pas une dépendance du jar, et il suit la
+dernière version **stable** de fabric-loom. Si un build casse dans loom lui-même, on l'épingle avec
+`--loom <version>` (utile pour une vieille version de Minecraft qu'un loom récent ne sait plus
+builder).
 
 En local, la même séquence tient en une commande :
 
@@ -28,10 +48,11 @@ python3 scripts/update-mc-version.py --run-tests          # dernière release Mo
 python3 scripts/update-mc-version.py 26.2 --run-tests     # version précise
 ```
 
-Elle met à jour `gradle.properties` et `fabric.mod.json`, lance `.github/scripts/test-matrix.sh` —
-qui build et démarre un serveur pour **chaque** version annoncée, pas seulement la plus récente — et
-n'annonce la compatibilité que si toutes passent ; sinon elle restaure les bornes de compatibilité
-précédentes en conservant le bump de dépendances.
+Elle met à jour `gradle.properties` et `fabric.mod.json`, puis lance
+`.github/scripts/test-with-escalation.sh` — qui build et démarre un serveur pour **chaque** version
+annoncée, pas seulement la plus récente, et escalade les dépendances gelées si besoin. La
+compatibilité n'est annoncée que si tout passe ; sinon les bornes précédentes sont restaurées, en
+conservant les bumps de dépendances.
 
 ### Déclencher la mise à jour à la main
 
@@ -60,7 +81,8 @@ une branche de travail ne produise pas une PR contenant tout le diff de cette br
 
 Détail du modèle de compatibilité et du découpage : `docs/mc-update-plan.md`.
 `python3 scripts/update-mc-version.py --help` liste les autres modes (`--dry-run`, `--json`,
-`--mark-supported`, `--revert-compat`).
+`--mark-supported`, `--revert-compat`, et les deux barreaux de l'escalade `--bump-fabric-api` /
+`--bump-loader`, qui sortent en code 3 quand il n'y a rien de plus récent).
 
 ## Publier une version
 
