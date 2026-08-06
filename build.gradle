@@ -154,6 +154,18 @@ modrinth {
 	changelog = releaseChangelog
 	gameVersions = supportedMinecraftVersions
 	loaders = ["fabric"]
+
+	// Fabric API is never bundled: the mod calls into it, and fabric.mod.json
+	// refuses to load without it. Saying so on the store is what stops a player
+	// from downloading a jar that cannot start.
+	//
+	// Declared at project level rather than pinned to a version id. The real
+	// constraint is a FLOOR (">=0.156.0+26.2" once an escalation proves a newer
+	// Fabric API is needed), and Modrinth only knows "any version of that
+	// project" or "exactly that version" — the latter would reject the newer
+	// builds that do work. The floor stays in fabric.mod.json, which is what
+	// Fabric Loader actually enforces at runtime.
+	required.project "fabric-api"
 }
 
 tasks.named("modrinth") {
@@ -187,6 +199,10 @@ if (curseForgeIdIsValid) {
 		// modloader. fabric.mod.json declares "environment": "*", so both apply.
 		mainFile.addGameVersion("Client")
 		mainFile.addGameVersion("Server")
+		// Same requirement as the modrinth block above. CurseForge relations
+		// carry no version at all, so this can only say "requires Fabric API";
+		// the version floor lives in fabric.mod.json either way.
+		mainFile.addRelation("fabric-api", net.darkhax.curseforgegradle.Constants.RELATION_REQUIRED)
 
 		doFirst { requireSupportedVersions() }
 	}
