@@ -1,0 +1,42 @@
+name: "[mc-bump] Auto-update"
+
+# TEST HARNESS — lives on the test/mc-bump branch only.
+#
+# No `schedule:` on purpose. The real check-new-minecraft.yml still holds the
+# cron; two schedulers racing on the same branch prefix would fight over the same
+# chore/mc-* branch.
+#
+# Run it with `force: true` and the CURRENT Minecraft version to exercise the
+# whole pipeline without waiting for Mojang: the updater resolves to the same
+# values, the matrix runs for real, and the pull request is opened against this
+# test branch rather than master (the workflow targets github.ref_name).
+
+on:
+  workflow_dispatch:
+    inputs:
+      mc-bump-ref:
+        description: Which mc-bump ref to run (branch, tag or SHA).
+        type: string
+        default: main
+      minecraft-version:
+        description: Force a version. Empty = latest release.
+        type: string
+        default: ""
+      force:
+        description: Continue even if the repo is already on that version.
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  update:
+    uses: spatulox-minecraft/mc-bump/.github/workflows/auto-update.yml@main
+    with:
+      mc-bump-ref: ${{ inputs.mc-bump-ref }}
+      minecraft-version: ${{ inputs.minecraft-version }}
+      force: ${{ inputs.force }}
+    secrets: inherit

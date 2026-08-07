@@ -1,0 +1,42 @@
+name: "[mc-bump] Release"
+
+# TEST HARNESS — lives on the test/mc-bump branch only.
+#
+# NO `push:` trigger, unlike the real release.yml. A release must never fire from
+# a test branch by accident, so this is dispatch-only and defaults to a dry run.
+#
+# dry-run: true does everything except the uploads and the tag — which validates
+# the guards, the matrix and the marker logic, but NOT the upload itself.
+#
+# To exercise a real upload without touching the published mod, point
+# gradle.properties at throwaway store projects ON THIS BRANCH:
+#
+#     modrinth_id=<a draft/unlisted Modrinth project of yours>
+#     curseforge_id=<a numeric id you own, or a non-numeric value to disable it>
+#
+# That is the one thing a separate test repository would have bought, and it is
+# cheaper to get here: a scratch store project rather than a scratch mod.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mc-bump-ref:
+        description: Which mc-bump ref to run (branch, tag or SHA).
+        type: string
+        default: main
+      dry-run:
+        description: Do everything except the uploads and the tag.
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  release:
+    uses: spatulox-minecraft/mc-bump/.github/workflows/release.yml@main
+    with:
+      mc-bump-ref: ${{ inputs.mc-bump-ref }}
+      dry-run: ${{ inputs.dry-run }}
+    secrets: inherit
