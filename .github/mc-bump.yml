@@ -1,0 +1,82 @@
+# mc-bump — everything this mod's CI needs to know about this mod.
+# Reference: https://github.com/spatulox-minecraft/mc-bump
+#
+# This file is the ONLY place where the pipeline learns what "Extended Time
+# Potion" is. Everything else lives in mc-bump and is shared with every other mod.
+
+loader: fabric
+
+mod:
+  id: extended-time-potion
+  package: com.spatulox
+  metadata: src/main/resources/fabric.mod.json
+  mixins: src/main/resources/extended-time-potion.mixins.json
+
+# Which pipelines run. Note that GitHub evaluates a workflow's `on:` before
+# reading anything, so a `false` here shows the run as skipped rather than
+# preventing it entirely.
+workflows:
+  ci: true
+  auto-update: true
+  release: true
+  unit-tests: true
+  gametest:
+    enabled: true
+    # Non blocking on purpose: src/gametest stopped compiling at the 26.2 update
+    # and no workflow noticed. Running it red is what makes that visible; it
+    # still opens an issue, it just does not hold the pipeline hostage.
+    blocking: false
+
+version:
+  # 26.2-1.1.0 — the left half is derived from the versions actually tested, the
+  # right half stays a manual release decision.
+  format: "{mc}-{mod}"
+  tag: "v{version}"
+
+tests:
+  unit:
+    source: src/test/java
+    task: test
+    # A src/test that does not exist makes `gradlew test` pass with zero tests,
+    # which is a green that proves nothing.
+    require-non-empty: true
+
+  matrix:
+    enabled: true
+    parallel: true
+
+  server:
+    boot-timeout: 900
+    stop-timeout: 60
+
+    # "The server started" does not prove the mod works: an empty registry or a
+    # brewing callback that never ran would both boot a healthy server. These are
+    # emitted by ExtendedTimePotion.onInitialize().
+    expect:
+      - pattern: "Brewing mixes registered"
+        message: "the Fabric API brewing callback never ran (FabricPotionBrewingBuilder broken?)"
+
+    # The expected count is derived from the source rather than kept as a constant
+    # to maintain in two places: adding a potion updates it on its own.
+    # `pattern` needs exactly one capture group, `count-pattern` is a literal.
+    expect-count:
+      - pattern: "Registered ([0-9]+) potions"
+        count-source: src/main/java/com/spatulox/ExtendedTimePotion.java
+        count-pattern: "= registerPotion("
+        message: "potion registry mismatch"
+
+    # Added to the loader's own fatal signatures, never replacing them.
+    fatal-extra: []
+
+release:
+  stores: [modrinth, curseforge]
+  branch-prefix: chore/mc-
+  artifact-retention-days: 30
+
+notify:
+  assignee: Spatulox
+  label: ci-failure
+  keep-branch: true
+  # The PR checks already report a red pull request; an issue per red PR is noise.
+  on-pull-request: false
+  log-tail: 100
