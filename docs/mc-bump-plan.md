@@ -1,12 +1,19 @@
 # Extraire la CI dans `mc-bump`, la rendre configurable et prête pour NeoForge
 
+> **Après-coup (2026-08-07).** Le plan prévoyait de garder les scripts de test en shell.
+> Ils ont finalement été réécrits en Python dans la foulée : le pont
+> `eval "$(config --sh)"` et ses enregistrements séparés par TAB disparaissent, le FIFO du
+> test serveur devient un simple `Popen(stdin=PIPE)`, et surtout les assertions sur le log
+> deviennent une fonction pure — testable sans démarrer de serveur, ce qu'aucun `grep` ne
+> permettait. Les sections ci-dessous ont été mises à jour en conséquence.
+
 ## Contexte
 
 La CI d'`ExtendedTimePotion` est bonne sur le fond — source de vérité unique pour les
 versions (`scripts/update-mc-version.py`), scripts relançables en local, échelle
 d'escalade des dépendances, ordre publish→tag correct — mais **elle est fusionnée avec
 ce mod précis**. L'identité du mod est éparpillée dans six fichiers : chemin de la classe
-principale et `grep -c '= registerPotion('` (`headless-server-test.sh:39-41`), id du mod
+principale et `grep -c '= registerPotion('` (`headless-server-test.py:39-41`), id du mod
 grepé dans le log (`:136`), marqueurs métier (`:166`, `:170`), `Spatulox` /
 `minecraft-update` / `chore/mc-` (`check-new-minecraft.yml:31,397,410,505`), user-agent et
 chemin du mixins (`update-mc-version.py:134,145`), `extended-time-potion-test`
@@ -101,9 +108,9 @@ mc-bump/
 │       └── __init__.py            # get_loader(name) -> Loader
 ├── scripts/
 │   ├── mc-bump.py                 # ex update-mc-version.py, CLI
-│   ├── headless-server-test.sh
-│   ├── test-matrix.sh
-│   └── test-with-escalation.sh
+│   ├── headless-server-test.py
+│   ├── test-matrix.py
+│   └── test-with-escalation.py
 └── tests/
     ├── test_versions.py
     ├── test_config.py
@@ -139,9 +146,8 @@ Ce qui **part dans `fabric.py`** : `meta.fabricmc.net`, la résolution de `fabri
 Modrinth, `maven.fabricmc.net` pour loom, l'écriture de `fabric.mod.json` et du
 `compatibilityLevel` du mixins.json, les barreaux d'escalade.
 
-Les trois `.sh` restent **loader-agnostiques** : ils lisent leur comportement via
-`eval "$(python3 lib/config.py --sh)"`, qui expose déjà la tâche gradle et les patterns
-résolus par le loader.
+Les trois scripts restent **loader-agnostiques** : ils lisent un `Project`, qui expose
+déjà la tâche gradle et les patterns résolus par le loader.
 
 ### Fichier de config du mod : `.github/mc-bump.yml`
 
@@ -201,7 +207,7 @@ notify:                   # rapport d'échec, commun aux trois types de tests
   log-tail: 100           # lignes de log par bloc <details>
 ```
 
-Les patterns fatals actuels (`headless-server-test.sh:155`) sont génériques à tout mod
+Les patterns fatals actuels (`headless-server-test.py:155`) sont génériques à tout mod
 Fabric : ils **restent le défaut du script**, `fatal-extra` ne fait qu'ajouter.
 
 `lib/config.py` : charge, valide contre un schéma explicite (message d'erreur nommant la
@@ -227,7 +233,7 @@ façon de garder une config unique.
 |---|---|---|
 | `guard` | — | lit `.github/mc-bump.yml`, sort `enabled`, la liste JSON des versions, `java`, l'id du mod. Pas de JDK, quelques secondes. |
 | `unit-tests` | `guard` | `./gradlew test` + upload de `build/reports/tests/` en `if: always()`. Échec si `require-non-empty` et aucun test. |
-| `matrix` | `guard` | `strategy.matrix.mc: ${{ fromJson(needs.guard.outputs.versions) }}` — un job par version, build + `headless-server-test.sh`. Remplace la boucle bash séquentielle : trois versions en parallèle au lieu de 40 min en série. |
+| `matrix` | `guard` | `strategy.matrix.mc: ${{ fromJson(needs.guard.outputs.versions) }}` — un job par version, build + `headless-server-test.py`. Remplace la boucle bash séquentielle : trois versions en parallèle au lieu de 40 min en série. |
 | `gametest` | `guard` | `continue-on-error: true`, `xvfb-run ./gradlew runClientGameTest`. Upload des screenshots. |
 | `verdict` | `unit-tests`, `matrix` | agrège et échoue si l'un des deux est rouge (`gametest` exclu, non bloquant). |
 
@@ -330,9 +336,8 @@ Reprend `check-new-minecraft.yml`, avec :
 
 ### `self-test.yml` (interne à mc-bump)
 
-`shellcheck` sur les trois `.sh`, `actionlint` sur les workflows,
-`python3 -m unittest discover tests`. Non négociable pour un repo qui *est* la CI : la
-logique de test vit dans des scripts shell aujourd'hui jamais lintés.
+`actionlint` sur les workflows, `python3 -m unittest discover -s tests -t .`, et un
+`--help` sur chaque point d'entrée. Non négociable pour un repo qui *est* la CI.
 
 ### Consommation
 
@@ -363,7 +368,7 @@ Versionnage : tag `v1` mobile + `v1.x.y` immuables.
   le gabarit de config pour le parsing *et* le rendu, et faire d'un format non reconnu une
   **erreur**. Idem pour `v$MOD_VERSION` en dur (`release.yml:63`) → `version.tag`.
 - **Preuve de chargement du mod.** `grep -q 'extended-time-potion'`
-  (`headless-server-test.sh:136`) est trop faible : l'id apparaît dans le classpath, donc le
+  (`headless-server-test.py:136`) est trop faible : l'id apparaît dans le classpath, donc le
   test passe même si le mod n'est pas chargé. Viser la ligne de récap du loader, via
   `loader.mod_loaded_pattern()`.
 - **Contrat scripts ↔ workflows.** `test-matrix-status.txt` et `test-escalation.txt` posés à
@@ -456,6 +461,6 @@ deux jobs de publication doivent afficher *skipped* sur marqueur trouvé, et `ta
 faire. Puis supprimer le marqueur `published/curseforge/<tag>` et relancer : seul CurseForge
 doit repartir.
 
-**Localement, sans GitHub** — les trois `.sh` restent lançables :
-`bash scripts/test-matrix.sh` depuis la racine du mod, avec `MC_VERSIONS` pour restreindre.
+**Localement, sans GitHub** — les trois scripts restent lançables :
+`python3 scripts/test-matrix.py` depuis la racine du mod, avec `MC_VERSIONS` pour restreindre.
 C'est la propriété la plus importante à ne pas casser en extrayant les scripts.
