@@ -27,7 +27,24 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	
+
+	// Unit tests (src/test). Only pure logic can live there: outside the Loom
+	// runtime the Minecraft classes are never initialised, so anything touching a
+	// registry belongs to the gametest source set instead.
+	testImplementation platform("org.junit:junit-bom:5.11.4")
+	testImplementation "org.junit.jupiter:junit-jupiter"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+// Without this the `test` task finds no engine and passes with zero tests, which
+// is a green proving nothing — exactly what tests.unit.require-non-empty in
+// .github/mc-bump.yml refuses.
+tasks.named("test") {
+	useJUnitPlatform()
+	testLogging {
+		events "failed"
+		exceptionFormat "full"
+	}
 }
 
 // Client side integration tests (src/gametest source set).
@@ -55,9 +72,9 @@ processResources {
 	}
 }
 
-// Derived from java_version in gradle.properties, which scripts/update-mc-version.py
-// resolves from the Mojang manifest. Hardcoding it here meant a Minecraft major bump
-// had to be fixed by hand in four places.
+// Derived from java_version in gradle.properties, which mc-bump resolves from the
+// Mojang manifest. Hardcoding it here meant a Minecraft major bump had to be fixed
+// by hand in four places.
 def javaVersion = JavaVersion.toVersion(project.java_version)
 
 tasks.withType(JavaCompile).configureEach {
@@ -106,7 +123,7 @@ static String changelogEntryFor(File file, String version) {
 }
 
 // Fallback for the automatic Minecraft bumps, which have no hand written notes:
-// every value here is already resolved by scripts/update-mc-version.py.
+// every value here is already resolved by mc-bump.
 def generatedChangelog = {
 	def parts = ["Support for Minecraft ${project.minecraft_version}".toString(), ""]
 	if (!supportedMinecraftVersions.isEmpty()) {
@@ -136,8 +153,9 @@ tasks.register("printChangelog") {
 def requireSupportedVersions = {
 	if (supportedMinecraftVersions.isEmpty()) {
 		throw new GradleException("supported_minecraft_versions is empty: no version has been " +
-			"validated yet, nothing can be published. Run bash .github/scripts/test-matrix.sh, " +
-			"then: python3 scripts/update-mc-version.py --mark-supported")
+			"validated yet, nothing can be published. With mc-bump checked out next to this " +
+			"repository, run: python3 ../mc-bump/scripts/test-matrix.py, " +
+			"then python3 ../mc-bump/scripts/mc-bump.py --mark-supported")
 	}
 }
 

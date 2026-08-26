@@ -19,8 +19,11 @@ public class ExtendedTimePotion implements ModInitializer {
     public static final String MOD_ID = "extended-time-potion";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    public static final int ELEVEN_MINUTES = 13200;  // 11 minutes en ticks
-    public static final int FIFTEEN_MINUTES = 18000; // 15 minutes en ticks
+    // Aliases, so the hundred registrations below read unchanged. The arithmetic
+    // lives in PotionDuration because this class cannot be loaded outside the game:
+    // reading a constant here runs the static initialisers, which hit the registries.
+    public static final int ELEVEN_MINUTES = PotionDuration.ELEVEN_MINUTES;
+    public static final int FIFTEEN_MINUTES = PotionDuration.FIFTEEN_MINUTES;
 
     // NIGHT_VISION
     public static Holder<Potion> LONG_LONG_NIGHT_VISION = registerPotion("long_long_night_vision",

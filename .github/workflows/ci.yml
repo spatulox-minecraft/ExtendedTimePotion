@@ -1,65 +1,32 @@
 name: CI
 
+# Everything this pipeline does lives in mc-bump; what it does it to THIS mod is
+# described by .github/mc-bump.yml, and nowhere else.
+#
+# Three independent kinds of test, three jobs, so a red one names itself:
+# unit tests (JUnit), the version matrix (build + boot a server, one job per
+# claimed Minecraft version) and the client gametest.
+#
+# @v1 is the major version pointer: it moves forward with mc-bump's backward
+# compatible changes, so a fix there reaches this mod without a commit here.
+# Pin a tag or a SHA instead if that is ever not what you want.
+
 on:
   push:
     branches: [master]
   pull_request:
   workflow_dispatch:
 
+# issues: write — the failure report opens (or comments on) an issue.
+permissions:
+  contents: read
+  issues: write
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build + headless server
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-
-    steps:
-      - uses: actions/checkout@v7
-
-      # First, and before the JDK: these are pure functions over the standard
-      # library, they need nothing but python3 and they run in a hundredth of a
-      # second. A regression in the compatibility logic therefore fails in
-      # seconds rather than at the end of a build.
-      #
-      # They also exist to be RUN. An unrun test rots silently, as src/gametest
-      # demonstrates: it stopped compiling at the 26.2 update and no workflow
-      # noticed.
-      - name: Unit tests
-        run: python3 -m unittest discover -s scripts --verbose
-
-      # java_version is derived from the Minecraft version by
-      # scripts/update-mc-version.py, so the JDK follows a Minecraft bump on its own.
-      - name: Read the Java version
-        id: java
-        run: echo "version=$(sed -n 's/^java_version=//p' gradle.properties | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
-
-      - name: Set up JDK ${{ steps.java.outputs.version }}
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: ${{ steps.java.outputs.version }}
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Build
-        run: |
-          chmod +x gradlew
-          ./gradlew build --stacktrace
-
-      - name: Headless server test
-        run: bash .github/scripts/headless-server-test.sh
-
-      - name: Upload logs
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: server-logs
-          path: |
-            server-test.log
-            run/logs/
-          retention-days: 7
-          if-no-files-found: ignore
+  ci:
+    uses: spatulox-minecraft/mc-bump/.github/workflows/ci.yml@v1
+    secrets: inherit

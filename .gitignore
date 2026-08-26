@@ -22,3 +22,6 @@ escalation.md
 gradle/wrapper/gradle-wrapper.jar
 
 scripts/__pycache__/
+
+# where the workflows check mc-bump out
+.mc-bump/
