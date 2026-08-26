@@ -56,13 +56,14 @@ tests:
       - pattern: "Brewing mixes registered"
         message: "the Fabric API brewing callback never ran (FabricPotionBrewingBuilder broken?)"
 
-    # The expected count is derived from the source rather than kept as a constant
-    # to maintain in two places: adding a potion updates it on its own.
-    # `pattern` needs exactly one capture group, `count-pattern` is a literal.
+    # Globs, not regexes. <count> marks where the number sits; * is anything.
+    # The expectation is derived from the source rather than kept as a constant in
+    # two places, and comments are stripped before counting, so a `registerPotion`
+    # mentioned in a comment does not inflate it.
     expect-count:
-      - pattern: "Registered ([0-9]+) potions"
+      - pattern: "Registered <count> potions"
         count-source: src/main/java/com/spatulox/ExtendedTimePotion.java
-        count-pattern: "= registerPotion("
+        count-pattern: "*= registerPotion(*"
         message: "potion registry mismatch"
 
     # Added to the loader's own fatal signatures, never replacing them.
