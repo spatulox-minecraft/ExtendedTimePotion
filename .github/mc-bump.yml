@@ -70,7 +70,11 @@ tests:
     fatal-extra: []
 
 release:
-  stores: [modrinth, curseforge]
+  # `github` needs no token: it publishes a GitHub release on the release tag,
+  # with the mod jar and the sources jar attached. It runs after the tag and
+  # asks the API whether the release exists, so deleting it and re-running the
+  # workflow recreates it.
+  stores: [modrinth, curseforge, github]
   branch-prefix: chore/mc-
   artifact-retention-days: 30
 

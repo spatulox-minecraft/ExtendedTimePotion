@@ -1,9 +1,9 @@
 name: Release
 
 # Publishes the mod to Modrinth and CurseForge once a new version lands on
-# master, then tags the commit. Each store publishes in its own, individually
-# replayable job — a marker tag per store is what makes a re-run skip what is
-# already out there.
+# master, then tags the commit and creates the GitHub release from that tag.
+# Each store publishes in its own, individually replayable job — a marker tag
+# per store is what makes a re-run skip what is already out there.
 #
 # The trigger is mod_version, not "the claimed versions grew": the tag carries
 # mod_version, so it is the only field that guarantees a unique name, and it
