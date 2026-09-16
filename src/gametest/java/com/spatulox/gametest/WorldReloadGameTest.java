@@ -20,7 +20,7 @@ public class WorldReloadGameTest implements FabricClientGameTest {
 		// 1. nouvelle partie + connexion
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			save = singleplayer.getWorldSave();
-			singleplayer.getClientLevel().waitForChunksRender();
+			singleplayer.getConnection().waitForChunksRender();
 
 			potionsALaCreation = countModPotions(singleplayer);
 			if (potionsALaCreation == 0) {
@@ -33,7 +33,7 @@ public class WorldReloadGameTest implements FabricClientGameTest {
 
 		// 3. rouvrir la meme sauvegarde
 		try (TestSingleplayerContext singleplayer = save.open()) {
-			singleplayer.getClientLevel().waitForChunksRender();
+			singleplayer.getConnection().waitForChunksRender();
 
 			int apresRechargement = countModPotions(singleplayer);
 			if (apresRechargement != potionsALaCreation) {

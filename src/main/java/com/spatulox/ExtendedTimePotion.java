@@ -2,13 +2,12 @@ package com.spatulox;
 
 import net.fabricmc.api.ModInitializer;
 
-import net.fabricmc.fabric.api.registry.FabricPotionBrewingBuilder;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.alchemy.Potion;
-import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.Registry;
 import net.minecraft.core.Holder;
@@ -190,113 +189,21 @@ public class ExtendedTimePotion implements ModInitializer {
     @Override
     public void onInitialize() {
 
-        // HEALING and HARMING cannot be time extended
-        FabricPotionBrewingBuilder.BUILD.register(builder -> {
-            // NIGHT_VISION
-            builder.addMix(Potions.LONG_NIGHT_VISION, Items.GOLD_NUGGET, LONG_LONG_NIGHT_VISION);
-            builder.addMix(LONG_LONG_NIGHT_VISION, Items.GOLDEN_CARROT, ULTRA_LONG_NIGHT_VISION);
-
-            // INVISIBILITY
-            builder.addMix(Potions.LONG_INVISIBILITY, Items.GOLD_NUGGET, LONG_LONG_INVISIBILITY);
-            builder.addMix(LONG_LONG_INVISIBILITY, Items.GOLDEN_CARROT, ULTRA_LONG_INVISIBILITY);
-
-            // LEAPING
-            builder.addMix(Potions.LONG_LEAPING, Items.GOLD_NUGGET, LONG_LONG_LEAPING);
-            builder.addMix(LONG_LONG_LEAPING, Items.GOLDEN_CARROT, ULTRA_LONG_LEAPING);
-
-            // STRONG_LEAPING
-            builder.addMix(Potions.STRONG_LEAPING, Items.GOLD_NUGGET, LONG_LONG_STRONG_LEAPING);
-            builder.addMix(LONG_LONG_STRONG_LEAPING, Items.GOLDEN_CARROT, ULTRA_LONG_STRONG_LEAPING);
-
-            // FIRE_RESISTANCE
-            builder.addMix(Potions.LONG_FIRE_RESISTANCE, Items.GOLD_NUGGET, LONG_LONG_FIRE_RESISTANCE);
-            builder.addMix(LONG_LONG_FIRE_RESISTANCE, Items.GOLDEN_CARROT, ULTRA_LONG_FIRE_RESISTANCE);
-
-            // SWIFTNESS
-            builder.addMix(Potions.LONG_SWIFTNESS, Items.GOLD_NUGGET, LONG_LONG_SWIFTNESS);
-            builder.addMix(LONG_LONG_SWIFTNESS, Items.GOLDEN_CARROT, ULTRA_LONG_SWIFTNESS);
-
-            // STRONG_SWIFTNESS
-            builder.addMix(Potions.STRONG_SWIFTNESS, Items.GOLD_NUGGET, LONG_LONG_STRONG_SWIFTNESS);
-            builder.addMix(LONG_LONG_STRONG_SWIFTNESS, Items.GOLDEN_CARROT, ULTRA_LONG_STRONG_SWIFTNESS);
-
-            // SLOWNESS
-            builder.addMix(Potions.LONG_SLOWNESS, Items.GOLD_NUGGET, LONG_LONG_SLOWNESS);
-            builder.addMix(LONG_LONG_SLOWNESS, Items.GOLDEN_CARROT, ULTRA_LONG_SLOWNESS);
-
-            // STRONG_SLOWNESS
-            builder.addMix(Potions.STRONG_SLOWNESS, Items.GOLD_NUGGET, LONG_LONG_STRONG_SLOWNESS);
-            builder.addMix(LONG_LONG_STRONG_SLOWNESS, Items.GOLDEN_CARROT, ULTRA_LONG_STRONG_SLOWNESS);
-
-            // TURTLE_MASTER
-            builder.addMix(Potions.LONG_TURTLE_MASTER, Items.GOLD_NUGGET, LONG_LONG_TURTLE_MASTER);
-            builder.addMix(LONG_LONG_TURTLE_MASTER, Items.GOLDEN_CARROT, ULTRA_LONG_TURTLE_MASTER);
-
-            // STRONG_TURTLE_MASTER
-            builder.addMix(Potions.STRONG_TURTLE_MASTER, Items.GOLD_NUGGET, LONG_LONG_STRONG_TURTLE_MASTER);
-            builder.addMix(LONG_LONG_STRONG_TURTLE_MASTER, Items.GOLDEN_CARROT, ULTRA_LONG_STRONG_TURTLE_MASTER);
-
-            // WATER_BREATHING
-            builder.addMix(Potions.LONG_WATER_BREATHING, Items.GOLD_NUGGET, LONG_LONG_WATER_BREATHING);
-            builder.addMix(LONG_LONG_WATER_BREATHING, Items.GOLDEN_CARROT, ULTRA_LONG_WATER_BREATHING);
-
-            // POISON
-            builder.addMix(Potions.LONG_POISON, Items.GOLD_NUGGET, LONG_LONG_POISON);
-            builder.addMix(LONG_LONG_POISON, Items.GOLDEN_CARROT, ULTRA_LONG_POISON);
-
-            // STRONG_POISON
-            builder.addMix(Potions.STRONG_POISON, Items.GOLD_NUGGET, LONG_LONG_STRONG_POISON);
-            builder.addMix(LONG_LONG_STRONG_POISON, Items.GOLDEN_CARROT, ULTRA_LONG_STRONG_POISON);
-
-            // REGENERATION
-            builder.addMix(Potions.LONG_REGENERATION, Items.GOLD_NUGGET, LONG_LONG_REGENERATION);
-            builder.addMix(LONG_LONG_REGENERATION, Items.GOLDEN_CARROT, ULTRA_LONG_REGENERATION);
-
-            // STRONG_REGENERATION
-            builder.addMix(Potions.STRONG_REGENERATION, Items.GOLD_NUGGET, LONG_LONG_STRONG_REGENERATION);
-            builder.addMix(LONG_LONG_STRONG_REGENERATION, Items.GOLDEN_CARROT, ULTRA_LONG_STRONG_REGENERATION);
-
-            // STRENGTH
-            builder.addMix(Potions.LONG_STRENGTH, Items.GOLD_NUGGET, LONG_LONG_STRENGTH);
-            builder.addMix(LONG_LONG_STRENGTH, Items.GOLDEN_CARROT, ULTRA_LONG_STRENGTH);
-
-            // STRONG_STRENGTH
-            builder.addMix(Potions.STRONG_STRENGTH, Items.GOLD_NUGGET, LONG_LONG_STRONG_STRENGTH);
-            builder.addMix(LONG_LONG_STRONG_STRENGTH, Items.GOLDEN_CARROT, ULTRA_LONG_STRONG_STRENGTH);
-
-            // WEAKNESS
-            builder.addMix(Potions.LONG_WEAKNESS, Items.GOLD_NUGGET, LONG_LONG_WEAKNESS);
-            builder.addMix(LONG_LONG_WEAKNESS, Items.GOLDEN_CARROT, ULTRA_LONG_WEAKNESS);
-
-            // LUCK
-            builder.addMix(Potions.LUCK, Items.GOLD_NUGGET, LONG_LONG_LUCK);
-            builder.addMix(LONG_LONG_LUCK, Items.GOLDEN_CARROT, ULTRA_LONG_LUCK);
-
-            // SLOW_FALLING
-            builder.addMix(Potions.LONG_SLOW_FALLING, Items.GOLD_NUGGET, LONG_LONG_SLOW_FALLING);
-            builder.addMix(LONG_LONG_SLOW_FALLING, Items.GOLDEN_CARROT, ULTRA_LONG_SLOW_FALLING);
-
-            // WIND_CHARGED
-            builder.addMix(Potions.WIND_CHARGED, Items.GOLD_NUGGET, LONG_LONG_WIND_CHARGED);
-            builder.addMix(LONG_LONG_WIND_CHARGED, Items.GOLDEN_CARROT, ULTRA_LONG_WIND_CHARGED);
-
-            // WEAVING
-            builder.addMix(Potions.WEAVING, Items.GOLD_NUGGET, LONG_LONG_WEAVING);
-            builder.addMix(LONG_LONG_WEAVING, Items.GOLDEN_CARROT, ULTRA_LONG_WEAVING);
-
-            // OOZING
-            builder.addMix(Potions.OOZING, Items.GOLD_NUGGET, LONG_LONG_OOZING);
-            builder.addMix(LONG_LONG_OOZING, Items.GOLDEN_CARROT, ULTRA_LONG_OOZING);
-
-            // INFESTED
-            builder.addMix(Potions.INFESTED, Items.GOLD_NUGGET, LONG_LONG_INFESTED);
-            builder.addMix(LONG_LONG_INFESTED, Items.GOLDEN_CARROT, ULTRA_LONG_INFESTED);
-
-            // Marqueur de bon fonctionnement : arriver ici prouve que le callback
-            // de brassage de Fabric API a tourne sans lever d'exception.
-            // Le CI verifie cette ligne pour valider la compatibilite avec une
-            // nouvelle version (cf. .github/scripts/headless-server-test.sh).
-            LOGGER.info("Brewing mixes registered");
+        // Brewing recipes are data driven since 26.3: the mixes are generated by
+        // src/datagen into src/main/generated/data/extended-time-potion/recipe/brewing.
+        // Counting them once the server is up proves the JSON actually loaded.
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            long mixes = server.getRecipeManager().getRecipes().stream()
+                    .filter(holder -> holder.value().getType() == RecipeType.BREWING)
+                    .filter(holder -> MOD_ID.equals(holder.id().identifier().getNamespace()))
+                    .count();
+            if (mixes == 0) {
+                LOGGER.error("No brewing recipe loaded, the generated data is missing from the jar");
+                return;
+            }
+            // The CI checks this line to validate compatibility with a new version
+            // (see .github/mc-bump.yml, tests.server.expect).
+            LOGGER.info("Brewing mixes registered: {} recipes", mixes);
         });
 
         long registered = BuiltInRegistries.POTION.keySet().stream()

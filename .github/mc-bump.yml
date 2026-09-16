@@ -50,11 +50,11 @@ tests:
     stop-timeout: 60
 
     # "The server started" does not prove the mod works: an empty registry or a
-    # brewing callback that never ran would both boot a healthy server. These are
+    # brewing recipes that never loaded would both boot a healthy server. These are
     # emitted by ExtendedTimePotion.onInitialize().
     expect:
       - pattern: "Brewing mixes registered"
-        message: "the Fabric API brewing callback never ran (FabricPotionBrewingBuilder broken?)"
+        message: "no brewing recipe loaded (src/main/generated missing from the jar? run ./gradlew runDatagen)"
 
     # Globs, not regexes. <count> marks where the number sits; * is anything.
     # The expectation is derived from the source rather than kept as a constant in

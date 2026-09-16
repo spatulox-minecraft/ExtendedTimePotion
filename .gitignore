@@ -25,3 +25,6 @@ scripts/__pycache__/
 
 # where the workflows check mc-bump out
 .mc-bump/
+
+# datagen bookkeeping, the generated JSON itself is committed
+src/main/generated/.cache/
