@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       minecraft-version:
-        description: "Force a specific Minecraft version (e.g. 26.2). Empty = latest release."
+        description: "Force a specific Minecraft version (e.g. 26.2). Empty = latest version in minecraft.channels."
         required: false
         type: string
       force:
@@ -29,10 +29,10 @@ permissions:
 
 jobs:
   update:
-    uses: spatulox-minecraft/mc-bump/.github/workflows/auto-update.yml@v1
+    uses: spatulox-minecraft/mc-bump/.github/workflows/auto-update.yml@v2
     with:
       # `inputs` is null on a scheduled run: the version resolves to the empty
-      # string (latest release) and force to its default.
+      # string (latest version in minecraft.channels) and force to its default.
       minecraft-version: ${{ inputs.minecraft-version }}
       force: ${{ inputs.force || false }}
     secrets: inherit

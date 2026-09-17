@@ -6,6 +6,11 @@
 
 loader: fabric
 
+minecraft:
+  # Release candidates are followed so the mod is proven before the release
+  # ships. Following is not publishing: see release.channels.
+  channels: [release, rc]
+
 mod:
   id: extended-time-potion
   package: com.spatulox
@@ -75,6 +80,9 @@ release:
   # asks the API whether the release exists, so deleting it and re-running the
   # workflow recreates it.
   stores: [modrinth, curseforge, github]
+  # Only full releases are published. Merging an rc update runs the release
+  # pipeline, which publishes nothing and stays green.
+  channels: [release]
   branch-prefix: chore/mc-
   artifact-retention-days: 30
 
