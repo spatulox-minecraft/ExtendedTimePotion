@@ -6,6 +6,11 @@
 
 loader: fabric
 
+minecraft:
+  # Release candidates are followed so the mod is proven before the release
+  # ships. Following is not publishing: see release.channels.
+  channels: [release, rc]
+
 mod:
   id: extended-time-potion
   package: com.spatulox
@@ -50,11 +55,11 @@ tests:
     stop-timeout: 60
 
     # "The server started" does not prove the mod works: an empty registry or a
-    # brewing callback that never ran would both boot a healthy server. These are
+    # brewing recipes that never loaded would both boot a healthy server. These are
     # emitted by ExtendedTimePotion.onInitialize().
     expect:
       - pattern: "Brewing mixes registered"
-        message: "the Fabric API brewing callback never ran (FabricPotionBrewingBuilder broken?)"
+        message: "no brewing recipe loaded (src/main/generated missing from the jar? run ./gradlew runDatagen)"
 
     # Globs, not regexes. <count> marks where the number sits; * is anything.
     # The expectation is derived from the source rather than kept as a constant in
@@ -75,6 +80,9 @@ release:
   # asks the API whether the release exists, so deleting it and re-running the
   # workflow recreates it.
   stores: [modrinth, curseforge, github]
+  # Only full releases are published. Merging an rc update runs the release
+  # pipeline, which publishes nothing and stays green.
+  channels: [release]
   branch-prefix: chore/mc-
   artifact-retention-days: 30
 

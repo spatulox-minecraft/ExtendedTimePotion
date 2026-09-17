@@ -7,7 +7,7 @@ name: CI
 # unit tests (JUnit), the version matrix (build + boot a server, one job per
 # claimed Minecraft version) and the client gametest.
 #
-# @v1 is the major version pointer: it moves forward with mc-bump's backward
+# @v2 is the major version pointer: it moves forward with mc-bump's backward
 # compatible changes, so a fix there reaches this mod without a commit here.
 # Pin a tag or a SHA instead if that is ever not what you want.
 
@@ -28,5 +28,5 @@ concurrency:
 
 jobs:
   ci:
-    uses: spatulox-minecraft/mc-bump/.github/workflows/ci.yml@v1
+    uses: spatulox-minecraft/mc-bump/.github/workflows/ci.yml@v2
     secrets: inherit

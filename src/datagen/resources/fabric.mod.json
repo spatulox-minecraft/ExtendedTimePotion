@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "extended-time-potion-datagen",
+	"version": "1.0.0",
+	"name": "Extended Time Potion - data generation",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-datagen": [
+			"com.spatulox.datagen.ExtendedTimePotionDataGenerator"
+		]
+	},
+	"depends": {
+		"extended-time-potion": "*"
+	}
+}

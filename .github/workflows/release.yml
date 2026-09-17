@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   release:
-    uses: spatulox-minecraft/mc-bump/.github/workflows/release.yml@v1
+    uses: spatulox-minecraft/mc-bump/.github/workflows/release.yml@v2
     with:
       dry-run: ${{ inputs.dry-run || false }}
     secrets: inherit

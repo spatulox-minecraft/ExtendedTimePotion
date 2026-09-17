@@ -64,6 +64,19 @@ fabricApi {
 	}
 }
 
+// Brewing recipes (src/datagen source set). Since 26.3 brewing is data driven and
+// Fabric API dropped FabricPotionBrewingBuilder, so the mixes are generated as JSON
+// by ./gradlew runDatagen into src/main/generated, which is committed and added to
+// the main resources.
+fabricApi {
+	configureDataGeneration {
+		createSourceSet = true
+		modId = "extended-time-potion-datagen"
+		client = false
+		strictValidation = true
+	}
+}
+
 processResources {
 	inputs.property "version", project.version
 
